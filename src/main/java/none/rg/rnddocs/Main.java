@@ -8,13 +8,16 @@ public class Main {
     private File directory;
     private String path;
     
-    private int maxFiles = 10000;
+    private int maxFiles = 1000;
     private int minSize = 5000;
     private int maxSize = 1000000;
     private int lineLength = 80;
+    private int numWords = 100000;
     
     private static final byte[] VOWS = "aeoiu".getBytes();
     private static final byte[] CONS = "bcdfghjklmnpqrstvwxz".getBytes();
+    
+    private byte[][] words;
     
     private byte[] word = new byte[256];
     private int wordLen;
@@ -28,6 +31,7 @@ public class Main {
     void run() {
         long t = System.currentTimeMillis();
         prepareDir();
+        generateWords();
         for (int i = 0; i < maxFiles; i++) {
             generateFile(String.format("%s/%08d.txt", path, i));
         }
@@ -47,9 +51,9 @@ public class Main {
         int size = rnd(minSize, maxSize);
         int cnt = 0;
         while (size > 0) {
-            generateWord();
-            output.write(word, 0, wordLen);
-            cnt += wordLen + 1;
+            byte[] w = words[rnd(numWords)];
+            output.write(w, 0, w.length);
+            cnt += w.length + 1;
             if (cnt < lineLength) {
                 output.write(' ');
             } else {
@@ -60,11 +64,19 @@ public class Main {
         }
     }
     
-    void generateWord() {
-        wordLen = rnd(3, 8);
-        for (int i = 0; i < wordLen; i++) {
+    void generateWords() {
+        words = new byte[numWords][];
+        for (int i = 0; i < numWords; i++) {
+            words[i] = generateWord();
+        }
+    }
+    
+    byte[] generateWord() {
+        byte[] word = new byte[rnd(3, 8)];
+        for (int i = 0; i < word.length; i++) {
             word[i] = i % 2 == 0 ? CONS[rnd(CONS.length)] : VOWS[rnd(VOWS.length)];
         }
+        return word;
     }
     
     int rnd(int a, int b) {
