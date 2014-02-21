@@ -8,13 +8,16 @@ public class Main {
     private File directory;
     private String path;
     
-    private int maxFiles = 1000;
+    private int maxFiles = 10000;
     private int minSize = 5000;
-    private int maxSize = 100000;
+    private int maxSize = 1000000;
     private int lineLength = 80;
     
     private static final byte[] VOWS = "aeoiu".getBytes();
     private static final byte[] CONS = "bcdfghjklmnpqrstvwxz".getBytes();
+    
+    private byte[] word = new byte[256];
+    private int wordLen;
     
     private Random rnd = new Random();
     
@@ -26,37 +29,42 @@ public class Main {
         long t = System.currentTimeMillis();
         prepareDir();
         for (int i = 0; i < maxFiles; i++) {
-            generateFile(String.format("%s/%8d.txt", path, i));
+            generateFile(String.format("%s/%08d.txt", path, i));
         }
         t = System.currentTimeMillis() - t;
         System.out.println("Generation time: " + (t / 1000) + " sec");
     }
     
     void generateFile(String name) {
-        try (PrintStream output = new PrintStream(new FileOutputStream(name))) {
+        try (OutputStream output = new BufferedOutputStream(new FileOutputStream(name))) {
             generateFile(output);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
     
-    void generateFile(PrintStream output) {
+    void generateFile(OutputStream output) throws IOException {
         int size = rnd(minSize, maxSize);
-        StringBuilder sb = new StringBuilder();
+        int cnt = 0;
         while (size > 0) {
-            sb.append(generateWord());
-            if (sb.length() < lineLength) {
-                sb.append(' ');
+            generateWord();
+            output.write(word, 0, wordLen);
+            cnt += wordLen + 1;
+            if (cnt < lineLength) {
+                output.write(' ');
             } else {
-                output.println(sb);
-                size -= sb.length() + 1;
-                sb.setLength(0);
+                output.write('\n');
+                size -= cnt;
+                cnt = 0;
             }
         }
     }
     
-    String generateWord() {
-        return "paka";
+    void generateWord() {
+        wordLen = rnd(3, 8);
+        for (int i = 0; i < wordLen; i++) {
+            word[i] = i % 2 == 0 ? CONS[rnd(CONS.length)] : VOWS[rnd(VOWS.length)];
+        }
     }
     
     int rnd(int a, int b) {
