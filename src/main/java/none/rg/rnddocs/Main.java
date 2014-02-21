@@ -1,6 +1,7 @@
 package none.rg.rnddocs;
 
 import java.io.*;
+import java.util.*;
 
 public class Main {
     
@@ -13,7 +14,7 @@ public class Main {
     private int lineLength = 80;
     
     private static final byte[] VOWS = "aeoiu".getBytes();
-    private static final cons[] CONS = "bcdfghjklmnpqrstvwxz".getBytes();
+    private static final byte[] CONS = "bcdfghjklmnpqrstvwxz".getBytes();
     
     private Random rnd = new Random();
     
@@ -22,10 +23,13 @@ public class Main {
     }
     
     void run() {
+        long t = System.currentTimeMillis();
         prepareDir();
         for (int i = 0; i < maxFiles; i++) {
-            generateFile(String.format("%s/%8d.txt"));
+            generateFile(String.format("%s/%8d.txt", path, i));
         }
+        t = System.currentTimeMillis() - t;
+        System.out.println("Generation time: " + (t / 1000) + " sec");
     }
     
     void generateFile(String name) {
@@ -40,7 +44,7 @@ public class Main {
         int size = rnd(minSize, maxSize);
         StringBuilder sb = new StringBuilder();
         while (size > 0) {
-            sb.append(generateWord);
+            sb.append(generateWord());
             if (sb.length() < lineLength) {
                 sb.append(' ');
             } else {
@@ -70,7 +74,7 @@ public class Main {
             } else if (!directory.isDirectory()) {
                 throw new RuntimeException("Invalid directory path");
             }
-            path = dir.getCanonicalPath();
+            path = directory.getCanonicalPath();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
