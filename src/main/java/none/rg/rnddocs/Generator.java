@@ -5,11 +5,11 @@ import java.util.*;
 
 public class Generator {
 
-    private int maxFiles = 1000;
-    private int minSize = 5000;
-    private int maxSize = 100000;
-    private int lineLength = 80;
-    private int numWords = 100000;
+    private int numFiles;
+    private int minSize;
+    private int maxSize;
+    private int lineLength;
+    private int numWords;
     
     private Random rnd = new Random();
     
@@ -18,8 +18,24 @@ public class Generator {
     
     private byte[][] words;
     
+    public Generator(Properties props) {
+        numFiles = settings(props, "files", 1000);
+        minSize = settings(props, "minSize", 5000);
+        maxSize = settings(props, "maxSize", 100000);
+        lineLength = settings(props, "lineLength", 70);
+        numWords = settings(props, "words", 20000);
+    }
+    
+    private int settings(Properties props, String name, int def) {
+        String v = props.getProperty(name);
+        if (v == null || !v.matches("\\d+")) {
+            return def;
+        }
+        return Integer.parseInt(v);
+    }
+    
     public void generate(String path) {
-        for (int i = 0; i < maxFiles; i++) {
+        for (int i = 0; i < numFiles; i++) {
             generateFile(String.format("%s/%08d.txt", path, i));
         }
     }

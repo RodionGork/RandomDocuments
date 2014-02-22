@@ -10,9 +10,9 @@ public class Main {
     
     private Generator gen;
     
-    Main(String dirPath) {
+    Main(String dirPath, Properties props) {
         directory = new File(dirPath);
-        gen = new Generator();
+        gen = new Generator(props);
     }
     
     void run() {
@@ -37,7 +37,20 @@ public class Main {
     }
     
     public static void main(String... args) {
-        new Main(args.length > 0 ? args[0] : ".").run();
+        List<String> argList = new LinkedList<>(Arrays.asList(args));
+        Properties props = propsFromArgs(argList);
+        new Main(argList.isEmpty() ? "." : argList.get(0), props).run();
+    }
+    
+    static Properties propsFromArgs(List<String> args) {
+        Properties props = new Properties();
+        while (!args.isEmpty() && args.get(0).startsWith("--")) {
+            String[] parts = args.remove(0).substring(2).split("=", 2);
+            if (parts.length > 1) {
+                props.setProperty(parts[0], parts[1]);
+            }
+        }
+        return props;
     }
     
 }
