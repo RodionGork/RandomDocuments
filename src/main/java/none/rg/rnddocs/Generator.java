@@ -2,6 +2,8 @@ package none.rg.rnddocs;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
 public class Generator {
 
@@ -10,6 +12,7 @@ public class Generator {
     private int maxSize;
     private int lineLength;
     private int numWords;
+    private int cores;
     
     private Random rnd = new Random();
     
@@ -18,12 +21,16 @@ public class Generator {
     
     private byte[][] words;
     
+    private volatile int pos = 0;
+    
     public Generator(Properties props) {
         numFiles = settings(props, "files", 1000);
         minSize = settings(props, "minSize", 5000);
         maxSize = settings(props, "maxSize", 100000);
         lineLength = settings(props, "lineLength", 70);
         numWords = settings(props, "words", 20000);
+        cores = settings(props, "cores", Runtime.getRuntime().availableProcessors());
+
     }
     
     private int settings(Properties props, String name, int def) {
@@ -35,37 +42,55 @@ public class Generator {
     }
     
     public void generate(String path) {
-        for (int i = 0; i < numFiles; i++) {
-            generateFile(String.format("%s/%08d.txt", path, i));
-        }
-    }
-    
-    private void generateFile(String name) {
+        System.out.println("Creating " + cores + " threads...");
+        ExecutorService service = Executors.newFixedThreadPool(cores);
         prepareWords(false);
-        try (OutputStream output = new BufferedOutputStream(new FileOutputStream(name))) {
-            generateFile(output);
-        } catch (IOException e) {
+        for (int i = 0; i < numFiles; i++) {
+            String name = String.format("%s/%08d.txt", path, i);
+            service.execute(new FileGenerator(name));
+        }
+        service.shutdown();
+        try {
+            service.awaitTermination(1, TimeUnit.DAYS);
+        } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
     
-    private void generateFile(OutputStream output) throws IOException {
-        int size = rnd(minSize, maxSize);
-        int cnt = 0;
-        int pos = 0;
-        while (size > 0) {
-            pos = (pos + rnd(5) + 1) % words.length;
-            byte[] w = words[pos];
-            output.write(w, 0, w.length);
-            cnt += w.length + 1;
-            if (cnt < lineLength) {
-                output.write(' ');
-            } else {
-                output.write('\n');
-                size -= cnt;
-                cnt = 0;
+    private class FileGenerator implements Runnable {
+        
+        private String name;
+        
+        public FileGenerator(String name) {
+            this.name = name;
+        }
+        
+        public void run() {
+            try (OutputStream output = new BufferedOutputStream(new FileOutputStream(name))) {
+                generateFile(output);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         }
+        
+        private void generateFile(OutputStream output) throws IOException {
+            int size = rnd.nextInt(maxSize - minSize + 1) + minSize;
+            int cnt = 0;
+            while (size > 0) {
+                pos = (pos + rnd.nextInt(5) + 1) % words.length;
+                byte[] w = words[pos];
+                output.write(w, 0, w.length);
+                cnt += w.length + 1;
+                if (cnt < lineLength) {
+                    output.write(' ');
+                } else {
+                    output.write('\n');
+                    size -= cnt;
+                    cnt = 0;
+                }
+            }
+        }
+        
     }
     
     private void prepareWords(boolean force) {
